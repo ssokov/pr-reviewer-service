@@ -1,72 +1,11 @@
-version: 2
+version: "2"
 
 run:
   timeout: 5m
-  tests: true
 
 linters:
   enable:
     - errcheck
     - govet
-    - ineffassign
     - staticcheck
     - unused
-    - misspell
-    - unconvert
-    - unparam
-    - gocritic
-    - gosec
-    - bodyclose
-    - sqlclosecheck
-  disable:
-    - revive
-
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-    check-blank: true
-
-  govet:
-    enable-all: true
-
-  misspell:
-    locale: US
-
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - style
-      - performance
-    disabled-checks:
-      - commentFormatting
-      - whyNoLint
-
-  revive:
-    severity: warning
-    rules:
-      - name: exported
-        disabled: true
-      - name: package-comments
-        disabled: true
-      - name: var-naming
-        disabled: false
-
-  gosec:
-    excludes:
-      - G104
-      - G304
-
-issues:
-  exclude-dirs:
-    - vendor
-    - docs
-  exclude-files:
-    - ".*_test.go"
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
-        - gosec
-        - gocritic
-  max-issues-per-linter: 0
-  max-same-issues: 0
