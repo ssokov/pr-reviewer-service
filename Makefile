@@ -32,7 +32,7 @@ install-hooks:
 	@echo "Installing git hooks..."
 	@chmod +x deployments/git-hooks/pre-commit
 	@cp deployments/git-hooks/pre-commit .git/hooks/pre-commit
-	@echo "✅ Pre-commit hook installed"
+	@echo "Pre-commit hook installed"
 
 build:
 	go build -o bin/pr-reviewer-service ./cmd/pr-reviewer-service
