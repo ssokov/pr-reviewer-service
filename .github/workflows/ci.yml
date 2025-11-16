@@ -75,7 +75,7 @@ jobs:
         run: |
           go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
           echo "Running migrations..."
-          migrate -path migrations -database "postgres://max_superuser:max_superuser@localhost:5432/pr_system?sslmode=disable" up -verbose || exit 1
+          migrate -path migrations -database "postgres://max_superuser:max_superuser@localhost:5432/pr_system?sslmode=disable" up
           echo "Migrations completed successfully"
 
       - name: Verify schema
