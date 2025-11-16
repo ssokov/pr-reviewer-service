@@ -14,10 +14,9 @@
 make docker-up
 ```
 
-**Что запустится:**
 - API: `http://localhost:8080`
 - PostgreSQL: `localhost:5433`
-- Swagger UI: `http://localhost:8080/swagger/index.html`
+- Swagger: `http://localhost:8080/swagger/index.html`
 
 ---
 
