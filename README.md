@@ -14,12 +14,10 @@
 make docker-up
 ```
 
-### Что запустится:
-
-| Сервис | Порт | Описание |
-|--------|------|----------|
-| **API** | `8080` | REST API |
-| **PostgreSQL** | `5433` | База данных |
+**Что запустится:**
+- API: `http://localhost:8080`
+- PostgreSQL: `localhost:5433`
+- Swagger UI: `http://localhost:8080/swagger/index.html`
 
 ---
 
