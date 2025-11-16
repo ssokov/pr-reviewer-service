@@ -37,7 +37,7 @@ jobs:
           POSTGRES_PASSWORD: max_superuser
           POSTGRES_DB: pr_system
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U max_superuser"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -56,10 +56,31 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
+      - name: Wait for PostgreSQL
+        run: |
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U max_superuser; then
+              echo "PostgreSQL is ready!"
+              break
+            fi
+            echo "Waiting for PostgreSQL... ($i/30)"
+            sleep 1
+          done
+
+      - name: Verify database connection
+        run: |
+          PGPASSWORD=max_superuser psql -h localhost -p 5432 -U max_superuser -d pr_system -c "SELECT version();"
+
       - name: Run migrations
         run: |
           go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-          migrate -path migrations -database "postgres://max_superuser:max_superuser@localhost:5432/pr_system?sslmode=disable" up
+          echo "Running migrations..."
+          migrate -path migrations -database "postgres://max_superuser:max_superuser@localhost:5432/pr_system?sslmode=disable" up -verbose || exit 1
+          echo "Migrations completed successfully"
+
+      - name: Verify schema
+        run: |
+          PGPASSWORD=max_superuser psql -h localhost -p 5432 -U max_superuser -d pr_system -c "\dt pr_system.*"
 
       - name: Run all tests
         env:
