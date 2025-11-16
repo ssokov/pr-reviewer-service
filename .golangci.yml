@@ -9,3 +9,15 @@ linters:
     - govet
     - staticcheck
     - unused
+    - gosec
+    - misspell
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+          - gosec
