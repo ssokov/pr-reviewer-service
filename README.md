@@ -4,7 +4,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/ssokov/pr-reviewer-service)](https://goreportcard.com/report/github.com/ssokov/pr-reviewer-service)
 [![codecov](https://codecov.io/gh/ssokov/pr-reviewer-service/branch/main/graph/badge.svg)](https://codecov.io/gh/ssokov/pr-reviewer-service)
 
-Сервис для автоматического назначения ревьюверов в Pull Request
+Сервис для автоматического назначения ревьюверов Pull Request
 
 ---
 
@@ -20,7 +20,6 @@ make docker-up
 |--------|------|----------|
 | **API** | `8080` | REST API |
 | **PostgreSQL** | `5433` | База данных |
-| **Swagger UI** | `8080/swagger/index.html` | Swagger |
 
 ---
 
