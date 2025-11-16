@@ -88,7 +88,12 @@ jobs:
       - name: Run all tests
         env:
           TEST_DATABASE_URL: "postgres://max_superuser:max_superuser@localhost:5432/pr_system?sslmode=disable"
-        run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+        run: |
+          echo "Running tests with DATABASE: $TEST_DATABASE_URL"
+          go test -v -race -coverprofile=coverage.out -covermode=atomic ./... 2>&1 | tee test_output.log
+          echo ""
+          echo "Test summary:"
+          grep -E "^(ok|FAIL|\?|---)" test_output.log || true
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
