@@ -1,0 +1,42 @@
+#!/bin/sh
+set -e
+
+echo "🔍 Running pre-commit hooks..."
+
+echo "📝 Formatting code..."
+go fmt ./...
+
+if command -v gci &> /dev/null; then
+  gci write $(find . -name '*.go' -type f -not -path "*/vendor/*" -not -path "*/docs/*")
+else
+  echo "⚠️  gci not installed, skipping import sorting"
+fi
+
+echo "📦 Checking go.mod and go.sum..."
+go mod tidy
+if ! git diff --exit-code go.mod go.sum > /dev/null 2>&1; then
+  echo "❌ go.mod or go.sum are not up to date"
+  echo "   Run 'go mod tidy' and commit the changes"
+  exit 1
+fi
+
+echo "🧪 Running tests..."
+go test -short ./...
+if [ $? -ne 0 ]; then
+  echo "❌ Tests failed"
+  exit 1
+fi
+
+echo "🔎 Running linter..."
+if command -v golangci-lint &> /dev/null; then
+  golangci-lint run --config .golangci.yml
+  if [ $? -ne 0 ]; then
+    echo "❌ Linter found issues"
+    exit 1
+  fi
+else
+  echo "⚠️  golangci-lint not installed, skipping"
+  echo "   Install: brew install golangci-lint"
+fi
+
+echo "✅ All checks passed!"

@@ -1,0 +1,1 @@
+TRUNCATE pr_system.statuses CASCADE;
