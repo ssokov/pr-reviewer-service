@@ -17,7 +17,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	config "github.com/ssokov/pr-reviewer-service/cfg"
 	"github.com/ssokov/pr-reviewer-service/internal/app"
-
 	"github.com/vmkteam/embedlog"
 )
 
