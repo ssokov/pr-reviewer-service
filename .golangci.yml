@@ -1,13 +1,8 @@
-version: "2"
+version: 2
 
 run:
   timeout: 5m
   tests: true
-  skip-dirs:
-    - vendor
-    - docs
-  skip-files:
-    - ".*_test.go"
 
 linters:
   enable:
@@ -32,7 +27,6 @@ linters-settings:
     check-blank: true
 
   govet:
-    check-shadowing: true
     enable-all: true
 
   misspell:
@@ -63,17 +57,23 @@ linters-settings:
       - G304
 
 issues:
+  exclude-dirs:
+    - vendor
+    - docs
+  exclude-files:
+    - ".*_test.go"
   exclude-rules:
     - path: _test\.go
       linters:
         - errcheck
         - gosec
         - gocritic
-
   max-issues-per-linter: 0
   max-same-issues: 0
 
 output:
-  format: colored-line-number
+  formats:
+    colored-line-number:
+      path: stdout
   print-issued-lines: true
   print-linter-name: true
