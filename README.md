@@ -14,12 +14,6 @@
 make docker-up
 ```
 
-Или:
-
-```bash
-docker-compose -f deployments/docker/docker-compose.yml up
-```
-
 ### Что запустится:
 
 | Сервис | Порт | Описание |
@@ -35,7 +29,7 @@ docker-compose -f deployments/docker/docker-compose.yml up
 ### Docker
 
 ```bash
-make docker-up        # Запустить все сервисы (БД + миграции + API)
+make docker-up        # Запустить все сервисы
 make docker-down      # Остановить все сервисы
 make docker-build     # Собрать Docker образ
 ```
@@ -43,18 +37,18 @@ make docker-build     # Собрать Docker образ
 ### Разработка
 
 ```bash
-make build            # Собрать бинарник в bin/
+make build            # Собрать бинарник
 make run              # Запустить локально
-make fmt              # Форматировать код (go fmt + gci)
-make lint             # Запустить линтер (golangci-lint)
+make fmt              # Форматировать код
+make lint             # Запустить линтер
 ```
 
 ### Тесты
 
 ```bash
-make test             # Unit тесты (быстрые, без БД)
+make test             # Unit тесты
 make test-unit        # Только service layer тесты
-make test-integration # Интеграционные тесты (с БД)
+make test-integration # Интеграционные тесты
 make test-all         # Все тесты
 make test-coverage    # Тесты с отчетом покрытия (coverage.html)
 ```
@@ -76,7 +70,7 @@ make install-hooks    # Установить pre-commit хуки
 
 ## Swagger
 
-**http://localhost:8080/swagger/index.html**
+Доступен по адресу: **http://localhost:8080/swagger/index.html**
 
 ---
 
@@ -92,15 +86,10 @@ make install-hooks    # Установить pre-commit хуки
 - Unit тесты
 - Линтер (`golangci-lint`)
 
-**Пропустить хуки:**
-```bash
-git commit --no-verify
-```
-
 ### GitHub Actions CI
 
-Автоматически запускается при `push` и `pull_request` в ветку `main`:
+Запускается при `push` и `pull_request` в ветку `main`:
 
 **Покрытие кода тестами:**
-- Текущее: **87.8%**
+- Текущее: **87.8%** (unit + integration)
 - Минимум для CI: **80%**
