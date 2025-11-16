@@ -21,10 +21,13 @@ jobs:
           cache: true
 
       - name: Install golangci-lint
-        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+        run: |
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+          echo "Installed version:"
+          ~/go/bin/golangci-lint version
 
       - name: Run golangci-lint
-        run: golangci-lint run --config .golangci.yml --timeout 5m
+        run: ~/go/bin/golangci-lint run --config .golangci.yml --timeout 5m
 
   test-unit:
     name: Tests
