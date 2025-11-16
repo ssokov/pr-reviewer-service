@@ -84,5 +84,6 @@ make install-hooks    # Установить pre-commit хуки
 Запускается при `push` и `pull_request` в ветку `main`:
 
 **Покрытие кода тестами:**
-- Текущее: **87.8%** (unit + integration)
-- Минимум для CI: **80%**
+- Unit тесты: **~35%** (handlers, services)
+- С integration: **~87%** (требует PostgreSQL)
+- CI: показывает детальный отчет
