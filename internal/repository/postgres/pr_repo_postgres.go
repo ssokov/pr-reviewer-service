@@ -1,4 +1,4 @@
-package max_superuser
+package postgres
 
 import (
 	"context"

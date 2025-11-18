@@ -1,4 +1,4 @@
-package max_superuser
+package postgres
 
 import (
 	"context"
@@ -17,7 +17,7 @@ func setupTestDB(t *testing.T) *pgxpool.Pool {
 
 	connString := os.Getenv("TEST_DATABASE_URL")
 	if connString == "" {
-		connString = "max_superuser://max_superuser:max_superuser@localhost:5432/pr_system?sslmode=disable"
+		connString = "postgres://postgres:postgres@localhost:5432/pr_system?sslmode=disable"
 	}
 
 	pool, err := pgxpool.New(ctx, connString)

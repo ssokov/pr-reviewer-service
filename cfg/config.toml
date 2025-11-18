@@ -2,8 +2,8 @@
 [database]
 host = "db"                    
 port = 5432
-user = "max_superuser"         
-password = "max_superuser"     
+user = "postgres"         
+password = "postgres"     
 database = "pr_system"
 sslmode = "disable"
 

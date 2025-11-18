@@ -10,7 +10,7 @@ test-integration:
 	docker-compose -f deployments/docker/docker-compose.yml up -d db
 	@echo "Waiting for database..."
 	@sleep 3
-	TEST_DATABASE_URL="postgres://max_superuser:max_superuser@localhost:5433/pr_system?sslmode=disable" go test -v -coverprofile=coverage_integration.out -coverpkg=./... ./internal/repository/postgres
+	TEST_DATABASE_URL="postgres://postgres:postgres@localhost:5433/pr_system?sslmode=disable" go test -v -coverprofile=coverage_integration.out -coverpkg=./... ./internal/repository/postgres
 
 test-all:
 	go test -v ./...
@@ -50,7 +50,7 @@ docker-build:
 	docker build -f deployments/docker/Dockerfile -t pr-reviewer-service:latest .
 
 migrate-up:
-	migrate -path migrations -database "postgres://max_superuser:max_superuser@localhost:5433/pr_system?sslmode=disable" up
+	migrate -path migrations -database "postgres://postgres:postgres@localhost:5433/pr_system?sslmode=disable" up
 
 migrate-down:
-	migrate -path migrations -database "postgres://max_superuser:max_superuser@localhost:5433/pr_system?sslmode=disable" down
+	migrate -path migrations -database "postgres://postgres:postgres@localhost:5433/pr_system?sslmode=disable" down
