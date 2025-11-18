@@ -4,8 +4,8 @@ set -e
 
 echo "Setting up test database..."
 
-DB_USER="${DB_USER:-max_superuser}"
-DB_PASSWORD="${DB_PASSWORD:-max_superuser}"
+DB_USER="${DB_USER:-postgres}"
+DB_PASSWORD="${DB_PASSWORD:-postgres}"
 DB_HOST="${DB_HOST:-localhost}"
 DB_PORT="${DB_PORT:-5432}"
 TEST_DB_NAME="pr_system_test"
