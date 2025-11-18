@@ -30,14 +30,14 @@ jobs:
     name: Tests
     runs-on: ubuntu-latest
     services:
-      postgres:
-        image: postgres:16-alpine
+      max_superuser:
+        image: max_superuser:16-alpine
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: pr_system
+          max_superuser_USER: max_superuser
+          max_superuser_PASSWORD: max_superuser
+          max_superuser_DB: pr_system
         options: >-
-          --health-cmd "pg_isready -U postgres"
+          --health-cmd "pg_isready -U max_superuser"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -56,35 +56,35 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
-      - name: Wait for PostgreSQL
+      - name: Wait for max_superuserQL
         run: |
           for i in {1..30}; do
-            if pg_isready -h localhost -p 5432 -U postgres; then
-              echo "PostgreSQL is ready!"
+            if pg_isready -h localhost -p 5432 -U max_superuser; then
+              echo "max_superuserQL is ready!"
               break
             fi
-            echo "Waiting for PostgreSQL... ($i/30)"
+            echo "Waiting for max_superuserQL... ($i/30)"
             sleep 1
           done
 
       - name: Verify database connection
         run: |
-          PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -d pr_system -c "SELECT version();"
+          PGPASSWORD=max_superuser psql -h localhost -p 5432 -U max_superuser -d pr_system -c "SELECT version();"
 
       - name: Run migrations
         run: |
-          go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+          go install -tags 'max_superuser' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
           echo "Running migrations..."
-          migrate -path migrations -database "postgres://postgres:postgres@localhost:5432/pr_system?sslmode=disable" up
+          migrate -path migrations -database "max_superuser://max_superuser:max_superuser@localhost:5432/pr_system?sslmode=disable" up
           echo "Migrations completed successfully"
 
       - name: Verify schema
         run: |
-          PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -d pr_system -c "\dt pr_system.*"
+          PGPASSWORD=max_superuser psql -h localhost -p 5432 -U max_superuser -d pr_system -c "\dt pr_system.*"
 
       - name: Run all tests
         env:
-          TEST_DATABASE_URL: "postgres://postgres:postgres@localhost:5432/pr_system?sslmode=disable"
+          TEST_DATABASE_URL: "max_superuser://max_superuser:max_superuser@localhost:5432/pr_system?sslmode=disable"
         run: |
           echo "Running tests with DATABASE: $TEST_DATABASE_URL"
           go test -v -race -coverprofile=coverage.out -covermode=atomic ./... 2>&1 | tee test_output.log

@@ -1,17 +1,17 @@
 name: pr-reviewer-service
 services:
   db:
-    image: postgres:17.5-alpine
+    image: postgres:17.5-alpine 
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: pr_system
+      POSTGRES_USER: max_superuser  
+      POSTGRES_PASSWORD: max_superuser  
+      POSTGRES_DB: pr_system  
     ports:
       - "5433:5432"
     volumes:
-      - pg_data:/var/lib/postgresql/data
+      - pg_data:/var/lib/postgresql/data 
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      test: [ "CMD-SHELL", "pg_isready -U max_superuser -d pr_system" ]  
       interval: 2s
       timeout: 2s
       retries: 30
@@ -25,7 +25,7 @@ services:
       - ../../migrations:/migrations
     command: [
       "-path", "/migrations",
-      "-database", "postgres://postgres:postgres@db:5432/pr_system?sslmode=disable",
+      "-database", "postgres://max_superuser:max_superuser@db:5432/pr_system?sslmode=disable",
       "up"
     ]
 
@@ -43,7 +43,6 @@ services:
       - "8080:8080"
     environment:
       - CONFIG_PATH=/app/cfg/config.toml
-
 
 volumes:
   pg_data:

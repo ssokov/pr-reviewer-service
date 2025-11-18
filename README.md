@@ -15,7 +15,7 @@ make docker-up
 ```
 
 - API: `http://localhost:8080`
-- PostgreSQL: `localhost:5433`
+- max_superuserQL: `localhost:5433`
 - Swagger: `http://localhost:8080/swagger/index.html`
 
 ---
@@ -85,5 +85,5 @@ make install-hooks    # Установить pre-commit хуки
 
 **Покрытие кода тестами:**
 - Unit тесты: **~35%** (handlers, services)
-- С integration: **~87%** (требует PostgreSQL)
+- С integration: **~87%** (требует max_superuserQL)
 - CI: показывает детальный отчет

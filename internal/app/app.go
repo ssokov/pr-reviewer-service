@@ -9,7 +9,7 @@ import (
 	"github.com/labstack/echo/v4"
 	config "github.com/ssokov/pr-reviewer-service/cfg"
 	"github.com/ssokov/pr-reviewer-service/internal/http"
-	"github.com/ssokov/pr-reviewer-service/internal/repository/postgres"
+	max_superuser "github.com/ssokov/pr-reviewer-service/internal/repository/postgres"
 	"github.com/ssokov/pr-reviewer-service/internal/service"
 	"github.com/vmkteam/embedlog"
 )
@@ -48,10 +48,10 @@ func New(appName string, slogger embedlog.Logger, c *config.Config, db *pgxpool.
 
 func (a *App) initDependencies() {
 	// init repositories
-	userRepo := postgres.NewUserRepository(a.db)
-	teamRepo := postgres.NewTeamRepository(a.db)
-	prRepo := postgres.NewPRRepository(a.db)
-	statsRepo := postgres.NewStatsRepository(a.db)
+	userRepo := max_superuser.NewUserRepository(a.db)
+	teamRepo := max_superuser.NewTeamRepository(a.db)
+	prRepo := max_superuser.NewPRRepository(a.db)
+	statsRepo := max_superuser.NewStatsRepository(a.db)
 
 	// init services
 	a.prService = service.NewPRService(prRepo, userRepo, teamRepo, a.sl)

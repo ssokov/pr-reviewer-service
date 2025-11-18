@@ -41,7 +41,7 @@ func Load(path string) (*Config, error) {
 }
 
 func (c *DBConfig) DSN() string {
-	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s",
+	return fmt.Sprintf("max_superuser://%s:%s@%s:%d/%s?sslmode=%s",
 		c.User,
 		c.Password,
 		c.Host,
