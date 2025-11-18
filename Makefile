@@ -9,7 +9,7 @@ test-unit:
 test-integration:
 	docker-compose -f deployments/docker/docker-compose.yml up -d db
 	@echo "Waiting for database..."
-	@sleep 3
+	@sleep 5
 	TEST_DATABASE_URL="postgres://postgres:postgres@localhost:5433/pr_system?sslmode=disable" go test -v -coverprofile=coverage_integration.out -coverpkg=./... ./internal/repository/postgres
 
 test-all:
@@ -41,16 +41,22 @@ run:
 	go run ./cmd/pr-reviewer-service
 
 docker-up:
-	docker-compose -f deployments/docker/docker-compose.yml up -d
+	docker-compose -f deployments/docker/docker-compose.yml up --build -d
 
 docker-down:
 	docker-compose -f deployments/docker/docker-compose.yml down
 
-docker-build:
-	docker build -f deployments/docker/Dockerfile -t pr-reviewer-service:latest .
+docker-clean:
+	docker-compose -f deployments/docker/docker-compose.yml down -v
+	docker system prune -f
+
+docker-rebuild:
+	docker-compose -f deployments/docker/docker-compose.yml up --build -d --force-recreate
 
 migrate-up:
 	migrate -path migrations -database "postgres://postgres:postgres@localhost:5433/pr_system?sslmode=disable" up
 
 migrate-down:
 	migrate -path migrations -database "postgres://postgres:postgres@localhost:5433/pr_system?sslmode=disable" down
+
+docker-fresh: docker-clean docker-up

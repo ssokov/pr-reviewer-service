@@ -47,7 +47,7 @@ func main() {
 	}
 
 	dsn := cfg.Database.DSN()
-	sl.Print(ctx, "connecting to database", "host", cfg.Database.Host, "database", cfg.Database.Database)
+	sl.Print(ctx, "connecting to database", "host", cfg.Database.Host, "database", cfg.Database.Database, "dsn", dsn)
 
 	poolCfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
