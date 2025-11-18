@@ -30,12 +30,12 @@ jobs:
     name: Tests
     runs-on: ubuntu-latest
     services:
-      max_superuser:
-        image: max_superuser:16-alpine
+      postgres:  
+        image: postgres:16-alpine 
         env:
-          max_superuser_USER: max_superuser
-          max_superuser_PASSWORD: max_superuser
-          max_superuser_DB: pr_system
+          POSTGRES_USER: max_superuser  
+          POSTGRES_PASSWORD: max_superuser
+          POSTGRES_DB: pr_system
         options: >-
           --health-cmd "pg_isready -U max_superuser"
           --health-interval 10s
@@ -56,14 +56,14 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
-      - name: Wait for max_superuserQL
+      - name: Wait for PostgreSQL
         run: |
           for i in {1..30}; do
             if pg_isready -h localhost -p 5432 -U max_superuser; then
-              echo "max_superuserQL is ready!"
+              echo "PostgreSQL is ready!"
               break
             fi
-            echo "Waiting for max_superuserQL... ($i/30)"
+            echo "Waiting for PostgreSQL... ($i/30)"
             sleep 1
           done
 
@@ -73,18 +73,18 @@ jobs:
 
       - name: Run migrations
         run: |
-          go install -tags 'max_superuser' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+          go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
           echo "Running migrations..."
-          migrate -path migrations -database "max_superuser://max_superuser:max_superuser@localhost:5432/pr_system?sslmode=disable" up
+          migrate -path migrations -database "postgres://max_superuser:max_superuser@localhost:5432/pr_system?sslmode=disable" up  # ← ИСПРАВИТЬ
           echo "Migrations completed successfully"
 
       - name: Verify schema
         run: |
-          PGPASSWORD=max_superuser psql -h localhost -p 5432 -U max_superuser -d pr_system -c "\dt pr_system.*"
+          PGPASSWORD=max_superuser psql -h localhost -p 5432 -U max_superuser -d pr_system -c "\dt"
 
       - name: Run all tests
         env:
-          TEST_DATABASE_URL: "max_superuser://max_superuser:max_superuser@localhost:5432/pr_system?sslmode=disable"
+          TEST_DATABASE_URL: "postgres://max_superuser:max_superuser@localhost:5432/pr_system?sslmode=disable"  # ← ИСПРАВИТЬ
         run: |
           echo "Running tests with DATABASE: $TEST_DATABASE_URL"
           go test -v -race -coverprofile=coverage.out -covermode=atomic ./... 2>&1 | tee test_output.log
