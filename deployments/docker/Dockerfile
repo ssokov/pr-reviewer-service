@@ -16,7 +16,6 @@ RUN apk --no-cache add ca-certificates
 WORKDIR /app
 
 COPY --from=builder /app/pr-reviewer-service .
-COPY --from=builder /app/cfg/config.toml ./cfg/config.toml
 COPY --from=builder /app/docs ./docs
 
 EXPOSE 8080
