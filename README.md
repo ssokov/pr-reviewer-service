@@ -9,7 +9,7 @@
 - Go-pg `github.com/go-pg/pg/v10`
 - Echo `v4`
 - Swagger (`swaggo`)
-- Genna (`model-named`, `search`, `validation`)
+- Genna (`model`, `search`, `validation`)
 
 ## Запуск (Docker)
 
