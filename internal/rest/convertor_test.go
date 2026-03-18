@@ -5,53 +5,70 @@ import (
 	"time"
 
 	"github.com/ssokov/pr-reviewer-service/internal/pr"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCreatePRRequestToDomain(t *testing.T) {
-	req := CreatePRRequest{
-		PullRequestID:   "pr-1",
-		PullRequestName: "Test PR",
-		AuthorID:        "u1",
-	}
+	t.Run("given create request when mapped to domain then required fields are preserved", func(t *testing.T) {
+		// Arrange
+		req := CreatePRRequest{
+			PullRequestID:   "pr-1",
+			PullRequestName: "Test PR",
+			AuthorID:        "u1",
+		}
 
-	got := CreatePRRequestToDomain(req)
-	if got.PullRequestID != "pr-1" || got.PullRequestName != "Test PR" || got.AuthorID != "u1" || got.Status != pr.PRStatusOpen {
-		t.Fatalf("unexpected result: %#v", got)
-	}
+		// Act
+		got := CreatePRRequestToDomain(req)
+
+		// Assert
+		assert.Equal(t, "pr-1", got.PullRequestID)
+		assert.Equal(t, "Test PR", got.PullRequestName)
+		assert.Equal(t, "u1", got.AuthorID)
+		assert.Equal(t, pr.PRStatusOpen, got.Status)
+	})
 }
 
 func TestTeamMappings(t *testing.T) {
-	req := AddTeamRequest{
-		TeamName: "backend",
-		Members: []TeamMember{
-			{UserID: "u1", Username: "Alice", IsActive: true},
-			{UserID: "u2", Username: "Bob", IsActive: false},
-		},
-	}
+	t.Run("given add-team request when mapped to domain and response then members are preserved", func(t *testing.T) {
+		// Arrange
+		req := AddTeamRequest{
+			TeamName: "backend",
+			Members: []TeamMember{
+				{UserID: "u1", Username: "Alice", IsActive: true},
+				{UserID: "u2", Username: "Bob", IsActive: false},
+			},
+		}
 
-	domain := AddTeamRequestToDomain(req)
-	if len(domain.Members) != 2 || domain.Members[0].UserID != "u1" {
-		t.Fatalf("unexpected domain mapping: %#v", domain)
-	}
+		// Act
+		domain := AddTeamRequestToDomain(req)
+		resp := TeamToResponse(domain)
 
-	resp := TeamToResponse(domain)
-	if resp.TeamName != "backend" || len(resp.Members) != 2 || resp.Members[1].UserID != "u2" {
-		t.Fatalf("unexpected response mapping: %#v", resp)
-	}
+		// Assert
+		require.Len(t, domain.Members, 2)
+		assert.Equal(t, "u1", domain.Members[0].UserID)
+
+		assert.Equal(t, "backend", resp.TeamName)
+		require.Len(t, resp.Members, 2)
+		assert.Equal(t, "u2", resp.Members[1].UserID)
+	})
 }
 
 func TestPullRequestsToShort(t *testing.T) {
-	now := time.Now()
-	in := []pr.PullRequest{
-		{PullRequestID: "pr-1", PullRequestName: "one", AuthorID: "u1", Status: pr.PRStatusOpen, CreatedAt: now},
-		{PullRequestID: "pr-2", PullRequestName: "two", AuthorID: "u2", Status: pr.PRStatusMerged, CreatedAt: now},
-	}
+	t.Run("given domain pull requests when mapped to short response then statuses are converted to strings", func(t *testing.T) {
+		// Arrange
+		now := time.Now()
+		in := []pr.PullRequest{
+			{PullRequestID: "pr-1", PullRequestName: "one", AuthorID: "u1", Status: pr.PRStatusOpen, CreatedAt: now},
+			{PullRequestID: "pr-2", PullRequestName: "two", AuthorID: "u2", Status: pr.PRStatusMerged, CreatedAt: now},
+		}
 
-	got := PullRequestsToShort(in)
-	if len(got) != 2 {
-		t.Fatalf("unexpected len: %d", len(got))
-	}
-	if got[0].Status != "OPEN" || got[1].Status != "MERGED" {
-		t.Fatalf("unexpected status mapping: %#v", got)
-	}
+		// Act
+		got := PullRequestsToShort(in)
+
+		// Assert
+		require.Len(t, got, 2)
+		assert.Equal(t, "OPEN", got[0].Status)
+		assert.Equal(t, "MERGED", got[1].Status)
+	})
 }

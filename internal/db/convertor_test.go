@@ -3,6 +3,8 @@ package db
 import "testing"
 
 func TestStatusIDToName(t *testing.T) {
+	// Arrange
+
 	tests := []struct {
 		name string
 		id   int
@@ -13,10 +15,18 @@ func TestStatusIDToName(t *testing.T) {
 		{name: "default", id: 999, want: PRStatusOpen},
 	}
 
+	// Act
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := StatusIDToName(tt.id); got != tt.want {
-				t.Fatalf("StatusIDToName(%d) = %q, want %q", tt.id, got, tt.want)
+			id := tt.id
+			want := tt.want
+
+			got := StatusIDToName(id)
+
+			// Assert
+			if got != want {
+				t.Fatalf("StatusIDToName(%d) = %q, want %q", id, got, want)
 			}
 		})
 	}

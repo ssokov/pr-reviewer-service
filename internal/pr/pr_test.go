@@ -10,65 +10,143 @@ import (
 )
 
 func TestPRService_CreatePR_Validation(t *testing.T) {
-	svc := NewPrService(nil, embedlog.NewLogger(false, false))
-	ctx := context.Background()
+	t.Run("given missing pull_request_id when CreatePR then invalid_input is returned", func(t *testing.T) {
+		// Arrange
+		svc := NewPrService(nil, embedlog.NewLogger(false, false))
+		ctx := context.Background()
 
-	_, err := svc.CreatePR(ctx, "u1", &PullRequest{PullRequestName: "name"})
-	require.Error(t, err)
-	assert.True(t, Is(err, ErrCodeInvalidInput))
+		// Act
+		_, err := svc.CreatePR(ctx, "u1", &PullRequest{PullRequestName: "name"})
 
-	_, err = svc.CreatePR(ctx, "u1", &PullRequest{PullRequestID: "pr-1"})
-	require.Error(t, err)
-	assert.True(t, Is(err, ErrCodeInvalidInput))
+		// Assert
+		require.Error(t, err)
+		assert.True(t, Is(err, ErrCodeInvalidInput))
+	})
 
-	_, err = svc.CreatePR(ctx, "", &PullRequest{PullRequestID: "pr-1", PullRequestName: "name"})
-	require.Error(t, err)
-	assert.True(t, Is(err, ErrCodeInvalidInput))
+	t.Run("given missing pull_request_name when CreatePR then invalid_input is returned", func(t *testing.T) {
+		// Arrange
+		svc := NewPrService(nil, embedlog.NewLogger(false, false))
+		ctx := context.Background()
+
+		// Act
+		_, err := svc.CreatePR(ctx, "u1", &PullRequest{PullRequestID: "pr-1"})
+
+		// Assert
+		require.Error(t, err)
+		assert.True(t, Is(err, ErrCodeInvalidInput))
+	})
+
+	t.Run("given missing author_id when CreatePR then invalid_input is returned", func(t *testing.T) {
+		// Arrange
+		svc := NewPrService(nil, embedlog.NewLogger(false, false))
+		ctx := context.Background()
+
+		// Act
+		_, err := svc.CreatePR(ctx, "", &PullRequest{PullRequestID: "pr-1", PullRequestName: "name"})
+
+		// Assert
+		require.Error(t, err)
+		assert.True(t, Is(err, ErrCodeInvalidInput))
+	})
 }
 
 func TestPRService_MergePR_Validation(t *testing.T) {
-	svc := NewPrService(nil, embedlog.NewLogger(false, false))
-	_, err := svc.MergePR(context.Background(), "")
-	require.Error(t, err)
-	assert.True(t, Is(err, ErrCodeInvalidInput))
+	t.Run("given empty pull_request_id when MergePR then invalid_input is returned", func(t *testing.T) {
+		// Arrange
+		svc := NewPrService(nil, embedlog.NewLogger(false, false))
+		ctx := context.Background()
+
+		// Act
+		_, err := svc.MergePR(ctx, "")
+
+		// Assert
+		require.Error(t, err)
+		assert.True(t, Is(err, ErrCodeInvalidInput))
+	})
 }
 
 func TestPRService_ReassignReviewer_Validation(t *testing.T) {
-	svc := NewPrService(nil, embedlog.NewLogger(false, false))
-	ctx := context.Background()
+	t.Run("given empty pull_request_id when ReassignReviewer then invalid_input is returned", func(t *testing.T) {
+		// Arrange
+		svc := NewPrService(nil, embedlog.NewLogger(false, false))
+		ctx := context.Background()
 
-	_, _, err := svc.ReassignReviewer(ctx, "", "u1")
-	require.Error(t, err)
-	assert.True(t, Is(err, ErrCodeInvalidInput))
+		// Act
+		_, _, err := svc.ReassignReviewer(ctx, "", "u1")
 
-	_, _, err = svc.ReassignReviewer(ctx, "pr-1", "")
-	require.Error(t, err)
-	assert.True(t, Is(err, ErrCodeInvalidInput))
+		// Assert
+		require.Error(t, err)
+		assert.True(t, Is(err, ErrCodeInvalidInput))
+	})
+
+	t.Run("given empty old_user_id when ReassignReviewer then invalid_input is returned", func(t *testing.T) {
+		// Arrange
+		svc := NewPrService(nil, embedlog.NewLogger(false, false))
+		ctx := context.Background()
+
+		// Act
+		_, _, err := svc.ReassignReviewer(ctx, "pr-1", "")
+
+		// Assert
+		require.Error(t, err)
+		assert.True(t, Is(err, ErrCodeInvalidInput))
+	})
 }
 
 func TestPRService_SetIsActive_Validation(t *testing.T) {
-	svc := NewPrService(nil, embedlog.NewLogger(false, false))
-	_, err := svc.SetIsActive(context.Background(), "", true)
-	require.Error(t, err)
-	assert.True(t, Is(err, ErrCodeInvalidInput))
+	t.Run("given empty user_id when SetIsActive then invalid_input is returned", func(t *testing.T) {
+		// Arrange
+		svc := NewPrService(nil, embedlog.NewLogger(false, false))
+		ctx := context.Background()
+
+		// Act
+		_, err := svc.SetIsActive(ctx, "", true)
+
+		// Assert
+		require.Error(t, err)
+		assert.True(t, Is(err, ErrCodeInvalidInput))
+	})
 }
 
 func TestPRService_GetReview_Validation(t *testing.T) {
-	svc := NewPrService(nil, embedlog.NewLogger(false, false))
-	_, err := svc.GetReview(context.Background(), "")
-	require.Error(t, err)
-	assert.True(t, Is(err, ErrCodeInvalidInput))
+	t.Run("given empty user_id when GetReview then invalid_input is returned", func(t *testing.T) {
+		// Arrange
+		svc := NewPrService(nil, embedlog.NewLogger(false, false))
+		ctx := context.Background()
+
+		// Act
+		_, err := svc.GetReview(ctx, "")
+
+		// Assert
+		require.Error(t, err)
+		assert.True(t, Is(err, ErrCodeInvalidInput))
+	})
 }
 
 func TestPRService_AddTeam_Validation(t *testing.T) {
-	svc := NewPrService(nil, embedlog.NewLogger(false, false))
-	ctx := context.Background()
+	t.Run("given missing team_name when AddTeam then invalid_input is returned", func(t *testing.T) {
+		// Arrange
+		svc := NewPrService(nil, embedlog.NewLogger(false, false))
+		ctx := context.Background()
 
-	_, err := svc.AddTeam(ctx, &Team{Members: []User{{UserID: "u1"}}})
-	require.Error(t, err)
-	assert.True(t, Is(err, ErrCodeInvalidInput))
+		// Act
+		_, err := svc.AddTeam(ctx, &Team{Members: []User{{UserID: "u1"}}})
 
-	_, err = svc.AddTeam(ctx, &Team{TeamName: "backend"})
-	require.Error(t, err)
-	assert.True(t, Is(err, ErrCodeInvalidInput))
+		// Assert
+		require.Error(t, err)
+		assert.True(t, Is(err, ErrCodeInvalidInput))
+	})
+
+	t.Run("given empty members when AddTeam then invalid_input is returned", func(t *testing.T) {
+		// Arrange
+		svc := NewPrService(nil, embedlog.NewLogger(false, false))
+		ctx := context.Background()
+
+		// Act
+		_, err := svc.AddTeam(ctx, &Team{TeamName: "backend"})
+
+		// Assert
+		require.Error(t, err)
+		assert.True(t, Is(err, ErrCodeInvalidInput))
+	})
 }
