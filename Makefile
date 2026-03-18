@@ -4,13 +4,13 @@ test:
 	go test -short -v ./...
 
 test-unit:
-	go test -short -v ./internal/service/...
+	go test -short -v ./internal/pr/...
 
 test-integration:
 	docker-compose -f deployments/docker/docker-compose.yml up -d db
 	@echo "Waiting for database..."
 	@sleep 5
-	TEST_DATABASE_URL="postgres://postgres:postgres@localhost:5433/pr_system?sslmode=disable" go test -v -coverprofile=coverage_integration.out -coverpkg=./... ./internal/repository/postgres
+	TEST_DATABASE_URL="postgres://db:db@localhost:5433/pr_system?sslmode=disable" go test -v -coverprofile=coverage_integration.out -coverpkg=./... ./internal/db
 
 test-all:
 	go test -v ./...
@@ -43,6 +43,9 @@ run:
 docker-up:
 	docker-compose -f deployments/docker/docker-compose.yml up --build -d
 
+docker-build:
+	docker-compose -f deployments/docker/docker-compose.yml build
+
 docker-down:
 	docker-compose -f deployments/docker/docker-compose.yml down
 
@@ -54,9 +57,9 @@ docker-rebuild:
 	docker-compose -f deployments/docker/docker-compose.yml up --build -d --force-recreate
 
 migrate-up:
-	migrate -path migrations -database "postgres://postgres:postgres@localhost:5433/pr_system?sslmode=disable" up
+	migrate -path migrations -database "postgres://db:db@localhost:5433/pr_system?sslmode=disable" up
 
 migrate-down:
-	migrate -path migrations -database "postgres://postgres:postgres@localhost:5433/pr_system?sslmode=disable" down
+	migrate -path migrations -database "postgres://db:db@localhost:5433/pr_system?sslmode=disable" down
 
 docker-fresh: docker-clean docker-up

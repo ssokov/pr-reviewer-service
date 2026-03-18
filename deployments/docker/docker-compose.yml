@@ -1,17 +1,17 @@
-name: pr-reviewer-service
+name: pr-reviewer-pr
 services:
   db:
     image: postgres:17.5-alpine 
     environment:
-      POSTGRES_USER: postgres  
-      POSTGRES_PASSWORD: postgres  
+      POSTGRES_USER: db
+      POSTGRES_PASSWORD: db
       POSTGRES_DB: pr_system  
     ports:
       - "5433:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data 
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d pr_system" ]  
+      test: [ "CMD-SHELL", "pg_isready -U db -d pr_system" ]
       interval: 2s
       timeout: 2s
       retries: 30
@@ -25,7 +25,7 @@ services:
       - ../../migrations:/migrations
     command: [
       "-path", "/migrations",
-      "-database", "postgres://postgres:postgres@db:5432/pr_system?sslmode=disable",
+      "-database", "postgres://db:db@db:5432/pr_system?sslmode=disable",
       "up"
     ]
 

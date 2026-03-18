@@ -1,24 +1,37 @@
 # PR Reviewer Service
 
-[![CI](https://github.com/ssokov/pr-reviewer-service/actions/workflows/ci.yml/badge.svg)](https://github.com/ssokov/pr-reviewer-service/actions/workflows/ci.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/ssokov/pr-reviewer-service)](https://goreportcard.com/report/github.com/ssokov/pr-reviewer-service)
-[![codecov](https://codecov.io/gh/ssokov/pr-reviewer-service/branch/main/graph/badge.svg)](https://codecov.io/gh/ssokov/pr-reviewer-service)
+Сервис для автоматического назначения ревьюверов Pull Request.
 
-Сервис для автоматического назначения ревьюверов Pull Request
+## Технологии
 
----
+- Go `1.25`
+- PostgreSQL `17`
+- Go-pg `github.com/go-pg/pg/v10`
+- Echo `v4`
+- Swagger (`swaggo`)
+- Genna (`model-named`, `search`, `validation`)
 
-## Запуск
+## Запуск (Docker)
 
 ```bash
-make docker-up
+docker compose -f deployments/docker/docker-compose.yml up -d db
+docker compose -f deployments/docker/docker-compose.yml run --rm migrate \
+  -path /migrations \
+  -database "postgres://db:db@db:5432/pr_system?sslmode=disable" \
+  up
+docker compose -f deployments/docker/docker-compose.yml up -d api
 ```
 
 - API: `http://localhost:8080`
-- postgresQL: `localhost:5433`
+- DB: `localhost:5433`
 - Swagger: `http://localhost:8080/swagger/index.html`
 
----
+## Локальная разработка
+
+```bash
+go test ./...
+go run ./cmd/pr-reviewer-service
+```
 
 ## Make команды
 
@@ -62,28 +75,43 @@ make migrate-down     # Откатить миграции
 make install-hooks    # Установить pre-commit хуки
 ```
 
----
+### Swagger
 
-## Swagger
+Доступен по адресу: `http://localhost:8080/swagger/index.html`
 
-Доступен по адресу: **http://localhost:8080/swagger/index.html**
+### Git Hooks & CI/CD
 
----
-
-## Git Hooks & CI/CD
-
-### Pre-commit хуки
+`pre-commit` хуки:
 
 - Форматирование кода (`go fmt`, `gci`)
 - Проверка `go.mod` и `go.sum`
 - Unit тесты
 - Линтер (`golangci-lint`)
 
-### GitHub Actions CI
+GitHub Actions CI:
 
-Запускается при `push` и `pull_request` в ветку `main`:
+- Запускается при `push` и `pull_request` в ветку `main`
 
-**Покрытие кода тестами:**
-- Unit тесты: **~35%** (handlers, services)
-- С integration: **~87%** (требует postgresQL)
-- CI: показывает детальный отчет
+## Генерация db-кода (genna)
+
+Модели/поиски/валидации генерируются из схемы БД:
+
+```bash
+genna model-named \
+  -c "postgres://db:db@localhost:5433/pr_system?sslmode=disable" \
+  -o internal/db/model_genna.go \
+  -t "pr_system.*" \
+  -f
+
+genna search \
+  -c "postgres://db:db@localhost:5433/pr_system?sslmode=disable" \
+  -o internal/db/search_genna.go \
+  -t "pr_system.*" \
+  -f
+
+genna validation \
+  -c "postgres://db:db@localhost:5433/pr_system?sslmode=disable" \
+  -o internal/db/validation_genna.go \
+  -t "pr_system.*" \
+  -f
+```
