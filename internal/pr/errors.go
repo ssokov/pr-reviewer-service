@@ -92,14 +92,6 @@ func NewNotAssignedError(userID, prID string) *AppError {
 	return New(ErrCodeNotAssigned, fmt.Sprintf("user '%s' is not assigned to PR '%s'", userID, prID))
 }
 
-func NewNoCandidateError(teamName string) *AppError {
-	return New(ErrCodeNoCandidate, fmt.Sprintf("no active candidate available in team '%s'", teamName))
-}
-
-func NewNotFoundError(resource string) *AppError {
-	return New(ErrCodeNotFound, fmt.Sprintf("%s not found", resource))
-}
-
 func NewInvalidInputError(message string) *AppError {
 	return New(ErrCodeInvalidInput, message)
 }

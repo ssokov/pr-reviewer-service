@@ -2,6 +2,7 @@ package pr
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	"github.com/ssokov/pr-reviewer-service/internal/db"
@@ -21,28 +22,17 @@ func NewPrService(repo *db.PrReviewerServiceRepo, logger embedlog.Logger) *PrSer
 }
 
 func (s *PrService) CreatePR(ctx context.Context, authorID string, pullRequest *PullRequest) (*PullRequest, error) {
-	if pullRequest.PullRequestID == "" {
-		return nil, NewInvalidInputError("pull_request_id is required")
-	}
-	if pullRequest.PullRequestName == "" {
-		return nil, NewInvalidInputError("pull_request_name is required")
-	}
-	if authorID == "" {
-		return nil, NewInvalidInputError("author_id is required")
+	if err := validateCreatePRInput(authorID, pullRequest); err != nil {
+		return nil, err
 	}
 
 	s.logger.Print(ctx, "creating PR", "pr_id", pullRequest.PullRequestID, "author_id", authorID)
 
-	authorDB, err := s.repo.GetByUserID(ctx, authorID)
+	author, err := s.getUserByID(ctx, authorID)
 	if err != nil {
 		s.logger.Errorf("failed to get author: %v", err)
-		return nil, NewInternalError("failed to get author", err)
+		return nil, err
 	}
-	if authorDB == nil {
-		s.logger.Print(ctx, "author not found", "author_id", authorID)
-		return nil, NewUserNotFoundError(authorID)
-	}
-	author := NewUser(authorDB)
 
 	if !author.IsActive {
 		s.logger.Print(ctx, "author is not active", "author_id", authorID)
@@ -76,16 +66,11 @@ func (s *PrService) MergePR(ctx context.Context, prID string) (*PullRequest, err
 
 	s.logger.Print(ctx, "merging PR", "pr_id", prID)
 
-	pullRequestDB, err := s.repo.GetByPRID(ctx, prID)
+	pullRequest, err := s.getPRByID(ctx, prID)
 	if err != nil {
 		s.logger.Errorf("failed to get PR: %v", err)
-		return nil, NewInternalError("failed to get PR", err)
+		return nil, err
 	}
-	if pullRequestDB == nil {
-		s.logger.Print(ctx, "PR not found", "pr_id", prID)
-		return nil, NewPRNotFoundError(prID)
-	}
-	pullRequest := NewPullRequest(pullRequestDB)
 
 	if pullRequest.Status == PRStatusMerged {
 		s.logger.Print(ctx, "PR already merged, returning current state", "pr_id", prID)
@@ -117,44 +102,27 @@ func (s *PrService) ReassignReviewer(ctx context.Context, prID string, oldUserID
 
 	s.logger.Print(ctx, "reassigning reviewer", "pr_id", prID, "old_user_id", oldUserID)
 
-	pullRequestDB, err := s.repo.GetByPRID(ctx, prID)
+	pullRequest, err := s.getPRByID(ctx, prID)
 	if err != nil {
 		s.logger.Errorf("failed to get PR: %v", err)
-		return nil, "", NewInternalError("failed to get PR", err)
+		return nil, "", err
 	}
-	if pullRequestDB == nil {
-		s.logger.Print(ctx, "PR not found", "pr_id", prID)
-		return nil, "", NewPRNotFoundError(prID)
-	}
-	pullRequest := NewPullRequest(pullRequestDB)
 
 	if pullRequest.Status == PRStatusMerged {
 		s.logger.Print(ctx, "cannot reassign on merged PR", "pr_id", prID)
 		return nil, "", NewPRMergedError(prID)
 	}
 
-	isAssigned := false
-	for _, reviewerID := range pullRequest.AssignedReviewers {
-		if reviewerID == oldUserID {
-			isAssigned = true
-			break
-		}
-	}
-	if !isAssigned {
+	if !isReviewerAssigned(pullRequest.AssignedReviewers, oldUserID) {
 		s.logger.Print(ctx, "user not assigned to PR", "pr_id", prID, "user_id", oldUserID)
 		return nil, "", NewNotAssignedError(oldUserID, prID)
 	}
 
-	oldUserDB, err := s.repo.GetByUserID(ctx, oldUserID)
+	oldUser, err := s.getUserByID(ctx, oldUserID)
 	if err != nil {
 		s.logger.Errorf("failed to get old user: %v", err)
-		return nil, "", NewInternalError("failed to get old user", err)
+		return nil, "", err
 	}
-	if oldUserDB == nil {
-		s.logger.Print(ctx, "old user not found", "user_id", oldUserID)
-		return nil, "", NewUserNotFoundError(oldUserID)
-	}
-	oldUser := NewUser(oldUserDB)
 
 	newReviewers, err := s.autoAssignReviewers(ctx, oldUser)
 	if err != nil {
@@ -169,14 +137,7 @@ func (s *PrService) ReassignReviewer(ctx context.Context, prID string, oldUserID
 
 	newReviewerID := newReviewers[0]
 
-	updatedReviewers := make([]string, 0, len(pullRequest.AssignedReviewers))
-	for _, reviewer := range pullRequest.AssignedReviewers {
-		if reviewer != oldUserID {
-			updatedReviewers = append(updatedReviewers, reviewer)
-		}
-	}
-	updatedReviewers = append(updatedReviewers, newReviewerID)
-	pullRequest.AssignedReviewers = updatedReviewers
+	pullRequest.AssignedReviewers = replaceReviewer(pullRequest.AssignedReviewers, oldUserID, newReviewerID)
 
 	updatedDB, err := s.repo.UpdatePR(ctx, NewDBPullRequest(pullRequest))
 	if err != nil {
@@ -248,13 +209,7 @@ func (s *PrService) GetStats(ctx context.Context) (*StatsResponse, error) {
 	}
 	topReviewers := NewReviewerStatsList(topReviewersDB)
 
-	var prsByStatusDTO []PRStatsItem
-	for status, count := range prsByStatus {
-		prsByStatusDTO = append(prsByStatusDTO, PRStatsItem{
-			Status: status,
-			Count:  count,
-		})
-	}
+	prsByStatusDTO := toPRStatsItems(prsByStatus)
 
 	var topReviewersDTO []UserStatsItem
 	for _, reviewer := range topReviewers {
@@ -350,15 +305,9 @@ func (s *PrService) GetReview(ctx context.Context, userID string) ([]PullRequest
 
 	s.logger.Print(ctx, "getting reviews for user", "user_id", userID)
 
-	userDB, err := s.repo.GetByUserID(ctx, userID)
-	if err != nil {
+	if _, err := s.getUserByID(ctx, userID); err != nil {
 		s.logger.Errorf("failed to get user: %v", err)
-		return nil, NewInternalError("failed to get user", err)
-	}
-
-	if userDB == nil {
-		s.logger.Print(ctx, "user not found", "user_id", userID)
-		return nil, NewUserNotFoundError(userID)
+		return nil, err
 	}
 
 	pullRequestsDB, err := s.repo.GetByReviewerID(ctx, userID)
@@ -370,4 +319,72 @@ func (s *PrService) GetReview(ctx context.Context, userID string) ([]PullRequest
 
 	s.logger.Print(ctx, "reviews retrieved", "user_id", userID, "count", len(pullRequests))
 	return pullRequests, nil
+}
+
+func validateCreatePRInput(authorID string, pullRequest *PullRequest) error {
+	if pullRequest.PullRequestID == "" {
+		return NewInvalidInputError("pull_request_id is required")
+	}
+	if pullRequest.PullRequestName == "" {
+		return NewInvalidInputError("pull_request_name is required")
+	}
+	if authorID == "" {
+		return NewInvalidInputError("author_id is required")
+	}
+	return nil
+}
+
+func (s *PrService) getPRByID(ctx context.Context, prID string) (*PullRequest, error) {
+	pullRequestDB, err := s.repo.GetByPRID(ctx, prID)
+	if err != nil {
+		return nil, NewInternalError("failed to get PR", err)
+	}
+	if pullRequestDB == nil {
+		return nil, NewPRNotFoundError(prID)
+	}
+	return NewPullRequest(pullRequestDB), nil
+}
+
+func (s *PrService) getUserByID(ctx context.Context, userID string) (*User, error) {
+	userDB, err := s.repo.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, NewInternalError("failed to get user", err)
+	}
+	if userDB == nil {
+		return nil, NewUserNotFoundError(userID)
+	}
+	return NewUser(userDB), nil
+}
+
+func isReviewerAssigned(reviewers []string, userID string) bool {
+	for _, reviewerID := range reviewers {
+		if reviewerID == userID {
+			return true
+		}
+	}
+	return false
+}
+
+func replaceReviewer(reviewers []string, oldUserID, newUserID string) []string {
+	updated := make([]string, 0, len(reviewers))
+	for _, reviewer := range reviewers {
+		if reviewer != oldUserID {
+			updated = append(updated, reviewer)
+		}
+	}
+	return append(updated, newUserID)
+}
+
+func toPRStatsItems(prsByStatus map[string]int) []PRStatsItem {
+	items := make([]PRStatsItem, 0, len(prsByStatus))
+	for status, count := range prsByStatus {
+		items = append(items, PRStatsItem{
+			Status: status,
+			Count:  count,
+		})
+	}
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].Status < items[j].Status
+	})
+	return items
 }

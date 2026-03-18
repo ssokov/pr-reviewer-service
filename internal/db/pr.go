@@ -7,7 +7,6 @@ import (
 	"sort"
 
 	"github.com/go-pg/pg/v10"
-	"github.com/go-pg/pg/v10/orm"
 )
 
 type PrReviewerServiceRepo struct {
@@ -66,8 +65,8 @@ func (r *PrReviewerServiceRepo) GetByPRID(ctx context.Context, prID string) (*Pu
 	search := PrSystemPullRequestSearch{PullRequestID: &prID}
 
 	q := r.db.ModelContext(ctx, model).
-		Relation("Author").
-		Relation("Status")
+		Relation(Columns.PrSystemPullRequest.Author).
+		Relation(Columns.PrSystemPullRequest.Status)
 	search.Apply(q)
 	if err := q.Select(); err != nil {
 		if errors.Is(err, pg.ErrNoRows) {
@@ -109,9 +108,9 @@ func (r *PrReviewerServiceRepo) UpdatePR(ctx context.Context, pr *PullRequest) (
 		search := PrSystemPullRequestSearch{PullRequestID: &pr.PullRequestID}
 
 		q := tx.ModelContext(ctx, model).
-			Set("pull_request_name = ?", pr.PullRequestName).
-			Set("status_id = ?", statusID).
-			Set("merged_at = ?", pr.MergedAt).
+			Set("? = ?", pg.Ident(Columns.PrSystemPullRequest.PullRequestName), pr.PullRequestName).
+			Set("? = ?", pg.Ident(Columns.PrSystemPullRequest.StatusID), statusID).
+			Set("? = ?", pg.Ident(Columns.PrSystemPullRequest.MergedAt), pr.MergedAt).
 			Returning("*")
 		search.Apply(q)
 
@@ -148,7 +147,7 @@ func (r *PrReviewerServiceRepo) UpdatePR(ctx context.Context, pr *PullRequest) (
 func (r *PrReviewerServiceRepo) GetByReviewerID(ctx context.Context, userID string) ([]PullRequest, error) {
 	reviewer := new(PrSystemUser)
 	reviewerSearch := PrSystemUserSearch{UserID: &userID}
-	qUser := r.db.ModelContext(ctx, reviewer).Column("id")
+	qUser := r.db.ModelContext(ctx, reviewer).Column(Columns.PrSystemUser.ID)
 	reviewerSearch.Apply(qUser)
 	if err := qUser.Select(); err != nil {
 		if errors.Is(err, pg.ErrNoRows) {
@@ -160,9 +159,9 @@ func (r *PrReviewerServiceRepo) GetByReviewerID(ctx context.Context, userID stri
 	search := PrSystemPrReviewerSearch{ReviewerID: &reviewer.ID}
 	var rels []PrSystemPrReviewer
 	q := r.db.ModelContext(ctx, &rels).
-		Relation("Pr").
-		Relation("Pr.Author").
-		Relation("Pr.Status")
+		Relation(Columns.PrSystemPrReviewer.Pr).
+		Relation(Columns.PrSystemPrReviewer.Pr + "." + Columns.PrSystemPullRequest.Author).
+		Relation(Columns.PrSystemPrReviewer.Pr + "." + Columns.PrSystemPullRequest.Status)
 	search.Apply(q)
 	if err := q.Select(); err != nil {
 		if errors.Is(err, pg.ErrNoRows) {
@@ -195,11 +194,11 @@ func (r *PrReviewerServiceRepo) GetByReviewerID(ctx context.Context, userID stri
 	return result, nil
 }
 
-func getReviewerIDsByPR(ctx context.Context, db modelContextQuery, prID int64) ([]string, error) {
+func getReviewerIDsByPR(ctx context.Context, db *pg.DB, prID int64) ([]string, error) {
 	var rels []PrSystemPrReviewer
 	search := PrSystemPrReviewerSearch{PrID: &prID}
 
-	q := db.ModelContext(ctx, &rels).Relation("Reviewer")
+	q := db.ModelContext(ctx, &rels).Relation(Columns.PrSystemPrReviewer.Reviewer)
 	search.Apply(q)
 	if err := q.Select(); err != nil {
 		if errors.Is(err, pg.ErrNoRows) {
@@ -226,7 +225,9 @@ func (r *PrReviewerServiceRepo) GetTotalUsers(ctx context.Context) (int, error) 
 }
 
 func (r *PrReviewerServiceRepo) GetActiveUsers(ctx context.Context) (int, error) {
-	return r.db.ModelContext(ctx, (*PrSystemUser)(nil)).Where("is_active = ?", true).Count()
+	return r.db.ModelContext(ctx, (*PrSystemUser)(nil)).
+		Where("? = ?", pg.Ident(Columns.PrSystemUser.IsActive), true).
+		Count()
 }
 
 func (r *PrReviewerServiceRepo) GetPRsByStatus(ctx context.Context) (map[string]int, error) {
@@ -237,7 +238,9 @@ func (r *PrReviewerServiceRepo) GetPRsByStatus(ctx context.Context) (map[string]
 
 	result := make(map[string]int, len(statuses))
 	for _, st := range statuses {
-		count, err := r.db.ModelContext(ctx, (*PrSystemPullRequest)(nil)).Where("status_id = ?", st.ID).Count()
+		count, err := r.db.ModelContext(ctx, (*PrSystemPullRequest)(nil)).
+			Where("? = ?", pg.Ident(Columns.PrSystemPullRequest.StatusID), st.ID).
+			Count()
 		if err != nil {
 			return nil, err
 		}
@@ -248,36 +251,58 @@ func (r *PrReviewerServiceRepo) GetPRsByStatus(ctx context.Context) (map[string]
 }
 
 func (r *PrReviewerServiceRepo) GetTopReviewers(ctx context.Context, limit int) ([]ReviewerStats, error) {
+	users, err := r.loadActiveUsers(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	assignments, err := r.loadReviewerAssignments(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	byReviewer := initReviewerStats(users)
+	aggregateReviewerAssignments(byReviewer, assignments)
+
+	result := flattenReviewerStats(byReviewer)
+	sortReviewerStats(result)
+	return applyReviewerLimit(result, limit), nil
+}
+
+func (r *PrReviewerServiceRepo) loadActiveUsers(ctx context.Context) ([]PrSystemUser, error) {
 	var users []PrSystemUser
 	if err := r.db.ModelContext(ctx, &users).
-		Where("is_active = ?", true).
+		Where("? = ?", pg.Ident(Columns.PrSystemUser.IsActive), true).
 		Select(); err != nil {
 		return nil, err
 	}
+	return users, nil
+}
 
+func (r *PrReviewerServiceRepo) loadReviewerAssignments(ctx context.Context) ([]PrSystemPrReviewer, error) {
 	var assignments []PrSystemPrReviewer
 	if err := r.db.ModelContext(ctx, &assignments).
-		Relation("Pr").
-		Where("reviewer_id IS NOT NULL").
+		Relation(Columns.PrSystemPrReviewer.Pr).
+		Where("? IS NOT NULL", pg.Ident(Columns.PrSystemPrReviewer.ReviewerID)).
 		Select(); err != nil {
 		return nil, err
 	}
+	return assignments, nil
+}
 
+func initReviewerStats(users []PrSystemUser) map[int64]ReviewerStats {
 	byReviewer := make(map[int64]ReviewerStats, len(users))
-	userIDByInternal := make(map[int64]string, len(users))
-	userNameByInternal := make(map[int64]string, len(users))
 	for _, u := range users {
-		userIDByInternal[u.ID] = u.UserID
-		userNameByInternal[u.ID] = u.Username
 		byReviewer[u.ID] = ReviewerStats{UserID: u.UserID, Username: u.Username}
 	}
+	return byReviewer
+}
 
+func aggregateReviewerAssignments(byReviewer map[int64]ReviewerStats, assignments []PrSystemPrReviewer) {
 	distinctPRs := make(map[int64]map[int64]struct{})
 	for _, a := range assignments {
-		if _, ok := byReviewer[a.ReviewerID]; !ok {
-			continue
-		}
-		if a.Pr == nil {
+		stat, ok := byReviewer[a.ReviewerID]
+		if !ok || a.Pr == nil {
 			continue
 		}
 		if distinctPRs[a.ReviewerID] == nil {
@@ -288,7 +313,6 @@ func (r *PrReviewerServiceRepo) GetTopReviewers(ctx context.Context, limit int) 
 		}
 		distinctPRs[a.ReviewerID][a.PrID] = struct{}{}
 
-		stat := byReviewer[a.ReviewerID]
 		stat.AssignedCount++
 		switch StatusIDToName(a.Pr.StatusID) {
 		case PRStatusMerged:
@@ -298,29 +322,33 @@ func (r *PrReviewerServiceRepo) GetTopReviewers(ctx context.Context, limit int) 
 		}
 		byReviewer[a.ReviewerID] = stat
 	}
+}
 
+func flattenReviewerStats(byReviewer map[int64]ReviewerStats) []ReviewerStats {
 	result := make([]ReviewerStats, 0, len(byReviewer))
-	for reviewerID, stat := range byReviewer {
+	for _, stat := range byReviewer {
 		if stat.AssignedCount == 0 {
 			continue
 		}
-		stat.UserID = userIDByInternal[reviewerID]
-		stat.Username = userNameByInternal[reviewerID]
 		result = append(result, stat)
 	}
+	return result
+}
 
+func sortReviewerStats(result []ReviewerStats) {
 	sort.Slice(result, func(i, j int) bool {
 		if result[i].AssignedCount == result[j].AssignedCount {
 			return result[i].UserID < result[j].UserID
 		}
 		return result[i].AssignedCount > result[j].AssignedCount
 	})
+}
 
+func applyReviewerLimit(result []ReviewerStats, limit int) []ReviewerStats {
 	if limit > 0 && len(result) > limit {
-		result = result[:limit]
+		return result[:limit]
 	}
-
-	return result, nil
+	return result
 }
 
 func (r *PrReviewerServiceRepo) CreateTeam(ctx context.Context, team *Team) (*Team, error) {
@@ -337,7 +365,7 @@ func (r *PrReviewerServiceRepo) CreateTeam(ctx context.Context, team *Team) (*Te
 		for _, m := range team.Members {
 			search := PrSystemUserSearch{UserID: &m.UserID}
 			q := tx.ModelContext(ctx, (*PrSystemUser)(nil)).
-				Set("team_id = ?", teamModel.ID)
+				Set("? = ?", pg.Ident(Columns.PrSystemUser.TeamID), teamModel.ID)
 			search.Apply(q)
 			res, err := q.Update()
 			if err != nil {
@@ -386,7 +414,7 @@ func (r *PrReviewerServiceRepo) GetByName(ctx context.Context, teamName string) 
 
 func (r *PrReviewerServiceRepo) ExistsByName(ctx context.Context, teamName string) (bool, error) {
 	count, err := r.db.ModelContext(ctx, (*PrSystemTeam)(nil)).
-		Where("name = ?", teamName).
+		Where("? = ?", pg.Ident(Columns.PrSystemTeam.Name), teamName).
 		Count()
 	if err != nil {
 		return false, fmt.Errorf("ExistsByName: %w", err)
@@ -394,15 +422,11 @@ func (r *PrReviewerServiceRepo) ExistsByName(ctx context.Context, teamName strin
 	return count > 0, nil
 }
 
-type modelContextQuery interface {
-	ModelContext(c context.Context, model ...interface{}) *orm.Query
-}
-
-func fetchTeamMembers(ctx context.Context, q modelContextQuery, teamID int64) ([]PrSystemUser, error) {
+func fetchTeamMembers(ctx context.Context, db *pg.DB, teamID int64) ([]PrSystemUser, error) {
 	var members []PrSystemUser
 	search := PrSystemUserSearch{TeamID: &teamID}
 
-	query := q.ModelContext(ctx, &members)
+	query := db.ModelContext(ctx, &members)
 	search.Apply(query)
 	if err := query.Select(); err != nil {
 		if errors.Is(err, pg.ErrNoRows) {
@@ -418,7 +442,7 @@ func (r *PrReviewerServiceRepo) GetByUserID(ctx context.Context, userID string) 
 	model := new(PrSystemUser)
 	search := PrSystemUserSearch{UserID: &userID}
 
-	q := r.db.ModelContext(ctx, model).Relation("Team")
+	q := r.db.ModelContext(ctx, model).Relation(Columns.PrSystemUser.Team)
 	search.Apply(q)
 	if err := q.Select(); err != nil {
 		if errors.Is(err, pg.ErrNoRows) {
@@ -435,7 +459,7 @@ func (r *PrReviewerServiceRepo) GetByTeamID(ctx context.Context, teamID int64) (
 	var models []PrSystemUser
 	search := PrSystemUserSearch{TeamID: &teamID}
 
-	q := r.db.ModelContext(ctx, &models).Relation("Team")
+	q := r.db.ModelContext(ctx, &models).Relation(Columns.PrSystemUser.Team)
 	search.Apply(q)
 	if err := q.Select(); err != nil {
 		if errors.Is(err, pg.ErrNoRows) {
@@ -452,7 +476,7 @@ func (r *PrReviewerServiceRepo) SetIsActive(ctx context.Context, userID string, 
 	search := PrSystemUserSearch{UserID: &userID}
 
 	q := r.db.ModelContext(ctx, model).
-		Set("is_active = ?", isActive).
+		Set("? = ?", pg.Ident(Columns.PrSystemUser.IsActive), isActive).
 		Returning("*")
 	search.Apply(q)
 
@@ -475,7 +499,7 @@ func resolveUserInternalID(ctx context.Context, tx *pg.Tx, userID string) (int64
 	m := new(PrSystemUser)
 	search := PrSystemUserSearch{UserID: &userID}
 
-	q := tx.ModelContext(ctx, m).Column("id")
+	q := tx.ModelContext(ctx, m).Column(Columns.PrSystemUser.ID)
 	search.Apply(q)
 	if err := q.Select(); err != nil {
 		return 0, err
@@ -488,7 +512,7 @@ func resolveStatusID(ctx context.Context, tx *pg.Tx, status PRStatus) (int, erro
 	m := new(PrSystemStatus)
 	search := PrSystemStatusSearch{Name: &name}
 
-	q := tx.ModelContext(ctx, m).Column("id")
+	q := tx.ModelContext(ctx, m).Column(Columns.PrSystemStatus.ID)
 	search.Apply(q)
 	if err := q.Select(); err != nil {
 		return 0, err

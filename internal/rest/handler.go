@@ -71,7 +71,6 @@ func (p *PRHandler) CreatePR(c echo.Context) error {
 // @Success 200 {object} dto.MergePRResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse "PR not found"
-// @Failure 409 {object} dto.ErrorResponse "PR already merged"
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /pullRequest/merge [post]
 func (p *PRHandler) MergePR(c echo.Context) error {
@@ -125,7 +124,6 @@ func (p *PRHandler) ReassignReviewer(c echo.Context) error {
 }
 
 // GetStats godoc
-// @Summary Get system statistics
 // @Summary Get statistics
 // @Description Get system statistics including PR counts, user counts, and top reviewers
 // @Tags stats
