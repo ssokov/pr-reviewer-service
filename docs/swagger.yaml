@@ -532,5 +532,5 @@ paths:
       tags:
       - user
 schemes:
-- http
+- rest
 swagger: "2.0"

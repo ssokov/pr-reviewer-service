@@ -827,7 +827,7 @@ var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "localhost:8080",
 	BasePath:         "/",
-	Schemes:          []string{"http"},
+	Schemes:          []string{"rest"},
 	Title:            "PR Reviewer Service API",
 	Description:      "API for managing pull request reviews and team assignments",
 	InfoInstanceName: "swagger",

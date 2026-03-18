@@ -3,7 +3,7 @@
 // @description API for managing pull request reviews and team assignments
 // @BasePath /
 // @host localhost:8080
-// @schemes http
+// @schemes rest
 package main
 
 import (
@@ -14,7 +14,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/go-pg/pg/v10"
 	config "github.com/ssokov/pr-reviewer-service/cfg"
 	"github.com/ssokov/pr-reviewer-service/internal/app"
 	"github.com/vmkteam/embedlog"
@@ -24,10 +24,6 @@ var (
 	flVerbose = flag.Bool("verbose", false, "print verbose output")
 	flJSON    = flag.Bool("json", false, "print output as JSON")
 	flDev     = flag.Bool("dev", true, "uses development mode")
-)
-
-const (
-	appName = "pr-reviewer-service"
 )
 
 func main() {
@@ -49,32 +45,30 @@ func main() {
 	dsn := cfg.Database.DSN()
 	sl.Print(ctx, "connecting to database", "host", cfg.Database.Host, "database", cfg.Database.Database, "dsn", dsn)
 
-	poolCfg, err := pgxpool.ParseConfig(dsn)
+	opt, err := pg.ParseURL(dsn)
 	if err != nil {
-		sl.Errorf("failed to parse pgx config: %v", err)
+		sl.Errorf("failed to parse pg config: %v", err)
 		exitOnError(err)
 	}
 
-	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
-	if err != nil {
-		sl.Errorf("failed to create pgx pool: %v", err)
-		exitOnError(err)
-	}
-	defer pool.Close()
+	db := pg.Connect(opt)
+	defer func() {
+		_ = db.Close()
+	}()
 
-	if err := pool.Ping(ctx); err != nil {
+	if err := db.Ping(ctx); err != nil {
 		sl.Errorf("db ping failed: %v", err)
 		exitOnError(err)
 	}
 
 	var version string
-	if err := pool.QueryRow(ctx, "select version()").Scan(&version); err != nil {
+	if _, err := db.QueryOneContext(ctx, pg.Scan(&version), "select version()"); err != nil {
 		sl.Errorf("failed to get version: %v", err)
 		exitOnError(err)
 	}
 	sl.Print(ctx, "connected to db", "version", version)
 
-	application := app.New(appName, sl, cfg, pool)
+	application := app.New(sl, cfg, db)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)

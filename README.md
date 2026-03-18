@@ -43,7 +43,7 @@ make lint             # Запустить линтер
 
 ```bash
 make test             # Unit тесты
-make test-unit        # Только service layer тесты
+make test-unit        # Только pr layer тесты
 make test-integration # Интеграционные тесты
 make test-all         # Все тесты
 make test-coverage    # Тесты с отчетом покрытия (coverage.html)
